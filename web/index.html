@@ -4,6 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Fashion Store</title>
+  <link rel="manifest" href="./manifest.json" />
+  <meta name="theme-color" content="#1a1a1a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Fashion" />
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231a1a1a'/><text x='50' y='58' font-size='30' font-weight='bold' fill='white' text-anchor='middle' font-family='Arial'>F</text></svg>" />
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #fafafa; color: #1a1a1a; max-width: 430px; margin: 0 auto; min-height: 100vh; }
@@ -154,11 +160,40 @@
     .view-all-btn { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 14px; margin: 8px 16px; border: 1px solid #e0e0e0; border-radius: 12px; cursor: pointer; font-size: 14px; font-weight: 600; background: #fff; }
 
     .loading { display: flex; justify-content: center; align-items: center; min-height: 50vh; font-size: 16px; color: #999; }
+
+    /* Cart badge */
+    .nav-item { position: relative; }
+    .cart-badge { position: absolute; top: 2px; right: 50%; transform: translateX(14px); background: #e74c3c; color: #fff; font-size: 10px; font-weight: 700; min-width: 18px; height: 18px; border-radius: 9px; display: flex; align-items: center; justify-content: center; padding: 0 4px; line-height: 1; }
+
+    /* Add-to-cart toast */
+    .cart-toast { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; background: #1a1a1a; color: #fff; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; z-index: 200; animation: slideUp 0.3s ease; }
+    .cart-toast .toast-text { font-size: 14px; font-weight: 500; }
+    .cart-toast .toast-text .check { color: #27ae60; margin-right: 6px; }
+    .cart-toast .toast-actions { display: flex; gap: 10px; }
+    .cart-toast .toast-btn { padding: 8px 16px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .toast-btn.primary { background: #fff; color: #1a1a1a; }
+    .toast-btn.secondary { background: transparent; color: #fff; border: 1px solid #555; }
+    @keyframes slideUp { from { transform: translateX(-50%) translateY(100%); } to { transform: translateX(-50%) translateY(0); } }
+
+    /* Image carousel */
+    .carousel-wrap { position: relative; overflow: hidden; }
+    .carousel-track { display: flex; transition: transform 0.3s ease; }
+    .carousel-track img { width: 100%; flex-shrink: 0; aspect-ratio: 0.9; object-fit: cover; background: #f0f0f0; }
+    .carousel-dots { display: flex; justify-content: center; gap: 6px; padding: 10px 0; }
+    .carousel-dot { width: 8px; height: 8px; border-radius: 50%; background: #ddd; border: none; cursor: pointer; padding: 0; }
+    .carousel-dot.active { background: #1a1a1a; width: 20px; border-radius: 4px; }
+    .carousel-arrow { position: absolute; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.85); border: none; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.15); z-index: 5; }
+    .carousel-arrow.left { left: 10px; }
+    .carousel-arrow.right { right: 10px; }
   </style>
 </head>
 <body>
   <div id="app"></div>
   <script>
+    // Register service worker for PWA
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js');
+    }
     const API = 'https://essaifashion.onrender.com';
     let state = {
       token: localStorage.getItem('token'),
@@ -170,6 +205,7 @@
       categories: [],
       cart: [],
       cartTotal: 0,
+      cartCount: 0,
       wishlist: [],
       orders: [],
       selectedProduct: null,
@@ -262,6 +298,7 @@
         state.categories = cats;
         if (state.token) {
           try { const w = await api('/wishlist'); state.wishlist = w; } catch {}
+          try { const c = await api('/cart'); state.cartCount = c.items.reduce((sum, i) => sum + i.quantity, 0); } catch {}
         }
         render();
       } catch (err) { console.error(err); }
@@ -280,6 +317,7 @@
 
     async function loadProduct(id) {
       try {
+        carouselIndex = 0;
         state.selectedProduct = await api('/products/' + id);
         const sizes = JSON.parse(state.selectedProduct.sizes);
         state.selectedSize = sizes[0] || 'M';
@@ -292,6 +330,7 @@
         const data = await api('/cart');
         state.cart = data.items;
         state.cartTotal = data.total;
+        state.cartCount = data.items.reduce((sum, i) => sum + i.quantity, 0);
         render();
       } catch (err) { console.error(err); }
     }
@@ -307,7 +346,24 @@
     // Cart actions
     async function addToCart(productId, size) {
       await api('/cart', { method: 'POST', body: JSON.stringify({ product_id: productId, size, quantity: 1 }) });
-      alert('Added to cart!');
+      state.cartCount++;
+      showCartToast();
+    }
+
+    function showCartToast() {
+      // Remove existing toast if any
+      const existing = document.querySelector('.cart-toast');
+      if (existing) existing.remove();
+      const toast = document.createElement('div');
+      toast.className = 'cart-toast';
+      toast.innerHTML = `
+        <span class="toast-text"><span class="check">✓</span> Added to cart</span>
+        <div class="toast-actions">
+          <button class="toast-btn secondary" onclick="this.closest('.cart-toast').remove(); state.selectedCategory=null; loadProducts(); navigate('catalog')">Browse More</button>
+          <button class="toast-btn primary" onclick="this.closest('.cart-toast').remove(); loadCart(); navigate('checkout')">Checkout →</button>
+        </div>`;
+      document.body.appendChild(toast);
+      setTimeout(() => { if (document.body.contains(toast)) toast.remove(); }, 5000);
     }
 
     async function updateCartQty(id, qty) {
@@ -355,6 +411,7 @@
         state.screen = 'order-success';
         state.lastOrderId = data.orderId;
         state.lastOrderTotal = data.total;
+        state.cartCount = 0;
         render();
       } catch (err) { alert(err.message); }
     }
@@ -453,12 +510,28 @@
           const p = state.selectedProduct;
           if (!p) { content = '<div class="loading">Loading...</div>'; break; }
           const sizes = JSON.parse(p.sizes);
+          const baseUrl = p.image_url.split('?')[0];
+          const images = [
+            baseUrl + '?w=500&fit=crop',
+            baseUrl + '?w=500&fit=crop&crop=top',
+            baseUrl + '?w=500&fit=crop&crop=left',
+            baseUrl + '?w=500&fit=crop&crop=bottom',
+          ];
           content = `<div class="product-detail" style="padding-bottom:100px">
             <div class="back-header" style="position:sticky;top:0;z-index:10">
               <button class="back-btn" onclick="goBack()">←</button>
               <h2>${p.name}</h2>
             </div>
-            <img src="${p.image_url}" alt="${p.name}" onerror="this.style.background='#e0e0e0'" />
+            <div class="carousel-wrap" id="carousel">
+              <div class="carousel-track" id="carousel-track">
+                ${images.map((img, i) => `<img src="${img}" alt="${p.name} view ${i+1}" onerror="this.style.background='#e0e0e0'" />`).join('')}
+              </div>
+              <button class="carousel-arrow left" onclick="carouselPrev()">‹</button>
+              <button class="carousel-arrow right" onclick="carouselNext()">›</button>
+            </div>
+            <div class="carousel-dots" id="carousel-dots">
+              ${images.map((_, i) => `<button class="carousel-dot ${i===0?'active':''}" onclick="carouselGo(${i})"></button>`).join('')}
+            </div>
             <div class="details">
               <div class="cat">${p.category_name}</div>
               <div class="pname">${p.name}</div>
@@ -530,6 +603,21 @@
                 <input id="co-address" placeholder="Street Address" required />
                 <input id="co-city" placeholder="City" required />
                 <div class="row"><input id="co-pin" placeholder="Pincode" required /><input id="co-phone" placeholder="Phone" required /></div>
+                <div class="section-title" style="padding:0;margin-top:20px">Payment Method</div>
+                <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+                  <label style="display:flex;align-items:center;gap:10px;padding:14px;background:#fff;border:2px solid #e0e0e0;border-radius:12px;cursor:pointer;font-size:14px;font-weight:500" onclick="this.querySelector('input').checked=true; document.querySelectorAll('.pay-opt').forEach(l=>l.style.borderColor='#e0e0e0'); this.style.borderColor='#1a1a1a'" class="pay-opt">
+                    <input type="radio" name="payment" value="upi" checked style="accent-color:#1a1a1a" /> <span style="font-size:18px">📱</span> UPI Apps (GPay, PhonePe, Paytm)
+                  </label>
+                  <label style="display:flex;align-items:center;gap:10px;padding:14px;background:#fff;border:2px solid #e0e0e0;border-radius:12px;cursor:pointer;font-size:14px;font-weight:500" onclick="this.querySelector('input').checked=true; document.querySelectorAll('.pay-opt').forEach(l=>l.style.borderColor='#e0e0e0'); this.style.borderColor='#1a1a1a'" class="pay-opt">
+                    <input type="radio" name="payment" value="credit" style="accent-color:#1a1a1a" /> <span style="font-size:18px">💳</span> Credit Card
+                  </label>
+                  <label style="display:flex;align-items:center;gap:10px;padding:14px;background:#fff;border:2px solid #e0e0e0;border-radius:12px;cursor:pointer;font-size:14px;font-weight:500" onclick="this.querySelector('input').checked=true; document.querySelectorAll('.pay-opt').forEach(l=>l.style.borderColor='#e0e0e0'); this.style.borderColor='#1a1a1a'" class="pay-opt">
+                    <input type="radio" name="payment" value="debit" style="accent-color:#1a1a1a" /> <span style="font-size:18px">💳</span> Debit Card
+                  </label>
+                  <label style="display:flex;align-items:center;gap:10px;padding:14px;background:#fff;border:2px solid #e0e0e0;border-radius:12px;cursor:pointer;font-size:14px;font-weight:500" onclick="this.querySelector('input').checked=true; document.querySelectorAll('.pay-opt').forEach(l=>l.style.borderColor='#e0e0e0'); this.style.borderColor='#1a1a1a'" class="pay-opt">
+                    <input type="radio" name="payment" value="cod" style="accent-color:#1a1a1a" /> <span style="font-size:18px">💵</span> Cash on Delivery
+                  </label>
+                </div>
                 <div class="section-title" style="padding:0;margin-top:16px">Order Summary</div>
                 ${state.cart.map(i => `<div class="order-summary-item"><span>${i.name} (${i.size}) x${i.quantity}</span><span>₹${(i.price*i.quantity).toLocaleString('en-IN')}</span></div>`).join('')}
                 <div class="divider"></div>
@@ -615,7 +703,7 @@
           <span style="font-size:20px">${state.tab==='wishlist'?'❤️':'🤍'}</span>Wishlist
         </button>
         <button class="nav-item ${state.tab==='cart'?'active':''}" onclick="loadCart(); setTab('cart')">
-          <span style="font-size:20px">🛍️</span>Cart
+          <span style="font-size:20px">🛍️</span>${state.cartCount > 0 ? `<span class="cart-badge">${state.cartCount}</span>` : ''}Cart
         </button>
         <button class="nav-item ${state.tab==='profile'?'active':''}" onclick="loadOrders(); setTab('profile')">
           <span style="font-size:20px">${state.tab==='profile'?'👤':'👤'}</span>Profile
@@ -624,6 +712,17 @@
 
       app.innerHTML = content + nav;
     }
+
+    // Image carousel
+    let carouselIndex = 0;
+    function carouselGo(i) {
+      carouselIndex = i;
+      const track = document.getElementById('carousel-track');
+      if (track) track.style.transform = `translateX(-${i * 100}%)`;
+      document.querySelectorAll('.carousel-dot').forEach((d, idx) => d.classList.toggle('active', idx === i));
+    }
+    function carouselNext() { const total = document.querySelectorAll('#carousel-track img').length; carouselGo((carouselIndex + 1) % total); }
+    function carouselPrev() { const total = document.querySelectorAll('#carousel-track img').length; carouselGo((carouselIndex - 1 + total) % total); }
 
     // Init
     async function init() {
