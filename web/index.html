@@ -626,8 +626,22 @@
     }
 
     // Init
-    if (state.token) { loadInitialData(); }
-    render();
+    async function init() {
+      if (state.token) {
+        try {
+          await api('/auth/me');
+          await loadInitialData();
+        } catch {
+          // Token invalid - clear and show login
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          state.token = null;
+          state.user = null;
+        }
+      }
+      render();
+    }
+    init();
   </script>
 </body>
 </html>
