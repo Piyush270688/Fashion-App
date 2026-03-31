@@ -1,21 +1,14 @@
-import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-
+const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET || 'fashion-app-secret-key-2024';
 
-export interface AuthRequest extends Request {
-  userId?: number;
-}
-
-export function authMiddleware(req: AuthRequest, res: Response, next: NextFunction) {
+function authMiddleware(req, res, next) {
   const header = req.headers.authorization;
   if (!header || !header.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Authentication required' });
   }
-
   try {
     const token = header.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: number };
+    const decoded = jwt.verify(token, JWT_SECRET);
     req.userId = decoded.userId;
     next();
   } catch {
@@ -23,8 +16,8 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
   }
 }
 
-export function generateToken(userId: number): string {
+function generateToken(userId) {
   return jwt.sign({ userId }, JWT_SECRET, { expiresIn: '7d' });
 }
 
-export { JWT_SECRET };
+module.exports = { authMiddleware, generateToken, JWT_SECRET };
