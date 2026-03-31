@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Fashion Store</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #fafafa; color: #1a1a1a; max-width: 430px; margin: 0 auto; min-height: 100vh; }
+    .hidden { display: none !important; }
+
+    /* Auth screens */
+    .auth-screen { display: flex; flex-direction: column; justify-content: center; min-height: 100vh; padding: 32px; background: #fff; }
+    .auth-screen h1 { font-size: 36px; font-weight: 800; text-align: center; letter-spacing: 6px; }
+    .auth-screen p { text-align: center; color: #999; margin-top: 8px; margin-bottom: 40px; font-size: 14px; }
+    .auth-screen input { width: 100%; height: 50px; border: 1px solid #e0e0e0; border-radius: 12px; padding: 0 16px; font-size: 15px; margin-bottom: 14px; background: #fafafa; outline: none; }
+    .auth-screen input:focus { border-color: #1a1a1a; }
+    .btn-primary { width: 100%; height: 50px; background: #1a1a1a; color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 8px; }
+    .btn-primary:hover { background: #333; }
+    .btn-primary:disabled { background: #999; }
+    .auth-link { text-align: center; margin-top: 20px; font-size: 14px; color: #999; cursor: pointer; }
+    .auth-link b { color: #1a1a1a; }
+    .error-msg { color: #e74c3c; font-size: 13px; text-align: center; margin-bottom: 10px; }
+
+    /* Navigation */
+    .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; background: #fff; border-top: 1px solid #f0f0f0; display: flex; padding: 8px 0 24px; z-index: 100; }
+    .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; padding: 6px 0; border: none; background: none; color: #999; font-size: 11px; font-weight: 500; }
+    .nav-item.active { color: #1a1a1a; }
+    .nav-item svg { width: 24px; height: 24px; }
+
+    /* Header */
+    .header { padding: 50px 16px 16px; display: flex; justify-content: space-between; align-items: center; }
+    .header-greeting { font-size: 14px; color: #999; }
+    .header-title { font-size: 24px; font-weight: 800; margin-top: 2px; }
+    .header-icon { cursor: pointer; padding: 8px; }
+    .section-title { font-size: 18px; font-weight: 700; padding: 0 16px; margin: 20px 0 12px; }
+    .page-content { padding-bottom: 100px; }
+
+    /* Chips */
+    .chip-row { display: flex; gap: 8px; padding: 0 16px; overflow-x: auto; scrollbar-width: none; }
+    .chip-row::-webkit-scrollbar { display: none; }
+    .chip { padding: 8px 16px; border-radius: 20px; background: #f5f5f5; border: 1px solid #e0e0e0; font-size: 13px; color: #666; font-weight: 500; cursor: pointer; white-space: nowrap; }
+    .chip.active { background: #1a1a1a; border-color: #1a1a1a; color: #fff; }
+
+    /* Product grid */
+    .product-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 0 16px; }
+    .product-card { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); cursor: pointer; }
+    .product-card img { width: 100%; aspect-ratio: 0.8; object-fit: cover; background: #f0f0f0; }
+    .product-card .info { padding: 10px; }
+    .product-card .category { font-size: 10px; color: #999; text-transform: uppercase; letter-spacing: 0.5px; }
+    .product-card .name { font-size: 13px; font-weight: 600; color: #333; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .product-card .price-row { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
+    .product-card .price { font-size: 14px; font-weight: 700; }
+    .product-card .rating { font-size: 11px; color: #666; }
+    .wishlist-btn { position: absolute; top: 8px; right: 8px; background: #fff; border: none; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 4px rgba(0,0,0,0.15); cursor: pointer; font-size: 16px; }
+    .product-card .img-wrap { position: relative; }
+
+    /* Product detail */
+    .product-detail img { width: 100%; aspect-ratio: 0.9; object-fit: cover; background: #f0f0f0; }
+    .product-detail .details { padding: 20px; }
+    .product-detail .cat { font-size: 12px; color: #999; text-transform: uppercase; letter-spacing: 1px; }
+    .product-detail .pname { font-size: 22px; font-weight: 700; margin-top: 4px; }
+    .product-detail .price-row { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; }
+    .product-detail .price { font-size: 24px; font-weight: 800; }
+    .product-detail .rating-badge { background: #fef9e7; padding: 4px 10px; border-radius: 12px; font-size: 14px; font-weight: 600; }
+    .product-detail .desc { font-size: 14px; color: #666; line-height: 22px; margin-top: 16px; }
+    .product-detail .label { font-size: 14px; font-weight: 600; margin-top: 20px; }
+    .size-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .size-btn { min-width: 44px; height: 44px; border-radius: 10px; border: 1px solid #e0e0e0; background: #fff; font-size: 13px; font-weight: 500; cursor: pointer; padding: 0 12px; }
+    .size-btn.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+    .bottom-bar { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; padding: 16px; padding-bottom: 32px; background: #fff; border-top: 1px solid #f0f0f0; display: flex; gap: 12px; z-index: 100; }
+    .btn-wishlist { width: 52px; height: 52px; border-radius: 14px; border: 1px solid #e0e0e0; background: #fff; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .btn-add-cart { flex: 1; height: 52px; background: #1a1a1a; color: #fff; border: none; border-radius: 14px; font-size: 16px; font-weight: 600; cursor: pointer; }
+
+    /* Recommendations */
+    .rec-row { display: flex; gap: 12px; padding: 0 20px; overflow-x: auto; scrollbar-width: none; }
+    .rec-row::-webkit-scrollbar { display: none; }
+    .rec-card { min-width: 140px; cursor: pointer; }
+    .rec-card img { width: 140px; height: 170px; border-radius: 10px; object-fit: cover; background: #f0f0f0; }
+    .rec-card .rname { font-size: 12px; color: #333; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rec-card .rprice { font-size: 13px; font-weight: 700; margin-top: 2px; }
+
+    /* Cart */
+    .cart-item { display: flex; background: #fff; border-radius: 12px; padding: 12px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+    .cart-item img { width: 80px; height: 80px; border-radius: 8px; object-fit: cover; background: #f0f0f0; }
+    .cart-item .details { flex: 1; margin-left: 12px; display: flex; flex-direction: column; justify-content: center; }
+    .cart-item .cname { font-size: 14px; font-weight: 600; }
+    .cart-item .csize { font-size: 12px; color: #999; margin-top: 2px; }
+    .cart-item .cprice { font-size: 15px; font-weight: 700; margin-top: 4px; }
+    .qty-row { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
+    .qty-btn { width: 28px; height: 28px; border-radius: 14px; background: #f0f0f0; border: none; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .remove-btn { padding: 8px; cursor: pointer; border: none; background: none; color: #e74c3c; font-size: 18px; align-self: center; }
+    .cart-summary { background: #fff; padding: 20px; padding-bottom: 34px; border-top: 1px solid #f0f0f0; }
+    .summary-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
+    .summary-row .label { color: #999; }
+    .summary-row .value { font-weight: 600; }
+    .total-row { border-top: 1px solid #f0f0f0; padding-top: 10px; margin-top: 4px; }
+    .total-row .label { font-size: 16px; font-weight: 700; }
+    .total-row .value { font-size: 20px; font-weight: 800; }
+
+    /* Empty state */
+    .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; color: #999; }
+    .empty-state .icon { font-size: 64px; color: #ddd; }
+    .empty-state h3 { font-size: 20px; font-weight: 700; color: #333; margin-top: 16px; }
+    .empty-state p { font-size: 14px; margin-top: 4px; }
+
+    /* Checkout */
+    .checkout-form { padding: 16px; }
+    .checkout-form input { width: 100%; height: 50px; border: 1px solid #e0e0e0; border-radius: 12px; padding: 0 16px; font-size: 15px; margin-bottom: 12px; background: #fff; outline: none; }
+    .checkout-form .row { display: flex; gap: 12px; }
+    .checkout-form .row input { flex: 1; }
+    .order-summary-item { display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px; }
+    .divider { height: 1px; background: #e0e0e0; margin: 8px 0; }
+
+    /* Success */
+    .success-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: #fff; padding: 32px; text-align: center; }
+    .success-screen .icon { font-size: 80px; color: #27ae60; }
+    .success-screen h2 { font-size: 24px; font-weight: 800; margin-top: 16px; }
+    .success-screen p { color: #666; margin-top: 8px; }
+    .success-screen .sub { color: #999; font-size: 14px; margin-top: 4px; }
+
+    /* Profile */
+    .profile-header { text-align: center; padding: 50px 16px 24px; background: #fff; }
+    .avatar { width: 72px; height: 72px; border-radius: 36px; background: #1a1a1a; color: #fff; font-size: 28px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin: 0 auto; }
+    .profile-header .pname { font-size: 20px; font-weight: 700; margin-top: 12px; }
+    .profile-header .pemail { font-size: 14px; color: #999; margin-top: 2px; }
+    .actions-row { display: flex; justify-content: space-around; padding: 16px; background: #fff; border-bottom: 1px solid #f0f0f0; }
+    .action-card { text-align: center; cursor: pointer; border: none; background: none; font-size: 12px; color: #666; font-weight: 500; }
+    .action-card .aicon { font-size: 22px; margin-bottom: 4px; }
+
+    /* Order card */
+    .order-card { background: #fff; border-radius: 12px; padding: 16px; margin: 0 16px 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+    .order-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .order-id { font-size: 15px; font-weight: 700; }
+    .order-date { font-size: 12px; color: #999; margin-top: 2px; }
+    .status-badge { padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+    .order-item-row { display: flex; align-items: center; padding: 6px 0; }
+    .order-item-row img { width: 40px; height: 40px; border-radius: 6px; object-fit: cover; background: #f0f0f0; }
+    .order-item-info { flex: 1; margin-left: 10px; }
+    .order-item-info .oname { font-size: 13px; }
+    .order-item-info .oqty { font-size: 11px; color: #999; }
+    .order-item-price { font-size: 13px; font-weight: 600; }
+    .order-footer { display: flex; justify-content: space-between; border-top: 1px solid #f0f0f0; margin-top: 8px; padding-top: 10px; }
+
+    /* Search */
+    .search-box { display: flex; align-items: center; background: #f0f0f0; border-radius: 12px; padding: 0 12px; height: 44px; margin: 8px 16px; }
+    .search-box input { flex: 1; border: none; background: none; font-size: 15px; outline: none; margin-left: 8px; }
+
+    /* Back button */
+    .back-header { display: flex; align-items: center; padding: 50px 16px 12px; background: #fff; border-bottom: 1px solid #f0f0f0; }
+    .back-btn { border: none; background: none; font-size: 24px; cursor: pointer; padding: 4px 8px; margin-right: 8px; }
+    .back-header h2 { font-size: 18px; font-weight: 700; }
+
+    .view-all-btn { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 14px; margin: 8px 16px; border: 1px solid #e0e0e0; border-radius: 12px; cursor: pointer; font-size: 14px; font-weight: 600; background: #fff; }
+
+    .loading { display: flex; justify-content: center; align-items: center; min-height: 50vh; font-size: 16px; color: #999; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script>
+    const API = 'https://essaifashion.onrender.com';
+    let state = {
+      token: localStorage.getItem('token'),
+      user: JSON.parse(localStorage.getItem('user') || 'null'),
+      screen: 'home',
+      screenStack: [],
+      products: [],
+      featured: [],
+      categories: [],
+      cart: [],
+      cartTotal: 0,
+      wishlist: [],
+      orders: [],
+      selectedProduct: null,
+      selectedSize: '',
+      selectedCategory: null,
+      searchQuery: '',
+      sort: 'newest',
+      tab: 'home',
+    };
+
+    async function api(path, opts = {}) {
+      const headers = { 'Content-Type': 'application/json' };
+      if (state.token) headers['Authorization'] = `Bearer ${state.token}`;
+      const res = await fetch(API + path, { ...opts, headers });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Request failed');
+      }
+      return res.json();
+    }
+
+    function navigate(screen, push = true) {
+      if (push && state.screen !== screen) state.screenStack.push(state.screen);
+      state.screen = screen;
+      render();
+    }
+
+    function goBack() {
+      state.screen = state.screenStack.pop() || 'home';
+      render();
+    }
+
+    function setTab(tab) {
+      state.tab = tab;
+      state.screenStack = [];
+      navigate(tab, false);
+    }
+
+    // Auth
+    async function handleLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+      try {
+        const data = await api('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
+        state.token = data.token;
+        state.user = data.user;
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        setTab('home');
+        loadInitialData();
+      } catch (err) {
+        document.getElementById('auth-error').textContent = err.message;
+      }
+    }
+
+    async function handleRegister(e) {
+      e.preventDefault();
+      const name = document.getElementById('reg-name').value;
+      const email = document.getElementById('reg-email').value;
+      const password = document.getElementById('reg-password').value;
+      if (password.length < 6) { document.getElementById('auth-error').textContent = 'Password must be at least 6 characters'; return; }
+      try {
+        const data = await api('/auth/register', { method: 'POST', body: JSON.stringify({ name, email, password }) });
+        state.token = data.token;
+        state.user = data.user;
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        setTab('home');
+        loadInitialData();
+      } catch (err) {
+        document.getElementById('auth-error').textContent = err.message;
+      }
+    }
+
+    function logout() {
+      state.token = null;
+      state.user = null;
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      state.screen = 'login';
+      render();
+    }
+
+    // Data loading
+    async function loadInitialData() {
+      try {
+        const [featured, cats] = await Promise.all([api('/products/featured'), api('/categories')]);
+        state.featured = featured;
+        state.categories = cats;
+        if (state.token) {
+          try { const w = await api('/wishlist'); state.wishlist = w; } catch {}
+        }
+        render();
+      } catch (err) { console.error(err); }
+    }
+
+    async function loadProducts() {
+      const params = new URLSearchParams({ sort: state.sort });
+      if (state.selectedCategory) params.set('category', state.selectedCategory);
+      if (state.searchQuery) params.set('search', state.searchQuery);
+      try {
+        const data = await api('/products?' + params);
+        state.products = data.products;
+        render();
+      } catch (err) { console.error(err); }
+    }
+
+    async function loadProduct(id) {
+      try {
+        state.selectedProduct = await api('/products/' + id);
+        const sizes = JSON.parse(state.selectedProduct.sizes);
+        state.selectedSize = sizes[0] || 'M';
+        render();
+      } catch (err) { console.error(err); }
+    }
+
+    async function loadCart() {
+      try {
+        const data = await api('/cart');
+        state.cart = data.items;
+        state.cartTotal = data.total;
+        render();
+      } catch (err) { console.error(err); }
+    }
+
+    async function loadOrders() {
+      try { state.orders = await api('/orders'); render(); } catch (err) { console.error(err); }
+    }
+
+    async function loadWishlist() {
+      try { state.wishlist = await api('/wishlist'); render(); } catch (err) { console.error(err); }
+    }
+
+    // Cart actions
+    async function addToCart(productId, size) {
+      await api('/cart', { method: 'POST', body: JSON.stringify({ product_id: productId, size, quantity: 1 }) });
+      alert('Added to cart!');
+    }
+
+    async function updateCartQty(id, qty) {
+      if (qty < 1) { await api('/cart/' + id, { method: 'DELETE' }); }
+      else { await api('/cart/' + id, { method: 'PUT', body: JSON.stringify({ quantity: qty }) }); }
+      loadCart();
+    }
+
+    async function removeCartItem(id) {
+      await api('/cart/' + id, { method: 'DELETE' });
+      loadCart();
+    }
+
+    // Wishlist actions
+    function isWishlisted(pid) { return state.wishlist.some(w => w.product_id === pid); }
+
+    async function toggleWishlist(pid) {
+      if (isWishlisted(pid)) {
+        await api('/wishlist/' + pid, { method: 'DELETE' });
+        state.wishlist = state.wishlist.filter(w => w.product_id !== pid);
+      } else {
+        await api('/wishlist', { method: 'POST', body: JSON.stringify({ product_id: pid }) });
+        await loadWishlist();
+      }
+      render();
+    }
+
+    async function moveToCart(item) {
+      await addToCart(item.product_id, 'M');
+      await api('/wishlist/' + item.product_id, { method: 'DELETE' });
+      state.wishlist = state.wishlist.filter(w => w.product_id !== item.product_id);
+      render();
+    }
+
+    // Place order
+    async function handlePlaceOrder(e) {
+      e.preventDefault();
+      const addr = document.getElementById('co-address').value;
+      const city = document.getElementById('co-city').value;
+      const pin = document.getElementById('co-pin').value;
+      const phone = document.getElementById('co-phone').value;
+      if (!addr || !city || !pin || !phone) { alert('Please fill all fields'); return; }
+      try {
+        const data = await api('/orders', { method: 'POST', body: JSON.stringify({ shipping_address: `${addr}, ${city} - ${pin}\nPhone: ${phone}` }) });
+        state.screen = 'order-success';
+        state.lastOrderId = data.orderId;
+        state.lastOrderTotal = data.total;
+        render();
+      } catch (err) { alert(err.message); }
+    }
+
+    // Render helpers
+    function productCardHTML(p) {
+      return `<div class="product-card" onclick="loadProduct(${p.id}); navigate('product-detail')">
+        <div class="img-wrap">
+          <img src="${p.image_url}" alt="${p.name}" onerror="this.style.background='#e0e0e0'" />
+          <button class="wishlist-btn" onclick="event.stopPropagation(); toggleWishlist(${p.id})">${isWishlisted(p.id) ? '❤️' : '🤍'}</button>
+        </div>
+        <div class="info">
+          <div class="category">${p.category_name}</div>
+          <div class="name">${p.name}</div>
+          <div class="price-row">
+            <span class="price">₹${p.price.toLocaleString('en-IN')}</span>
+            <span class="rating">⭐ ${p.rating}</span>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    // Main render
+    function render() {
+      const app = document.getElementById('app');
+      if (!state.token) {
+        if (state.screen === 'register') {
+          app.innerHTML = `<div class="auth-screen">
+            <h1>FASHION</h1><p>Create your account</p>
+            <div id="auth-error" class="error-msg"></div>
+            <form onsubmit="handleRegister(event)">
+              <input id="reg-name" placeholder="Full Name" required />
+              <input id="reg-email" type="email" placeholder="Email" required />
+              <input id="reg-password" type="password" placeholder="Password (min 6 characters)" required />
+              <button class="btn-primary" type="submit">Create Account</button>
+            </form>
+            <div class="auth-link" onclick="state.screen='login'; render()">Already have an account? <b>Sign In</b></div>
+          </div>`;
+        } else {
+          app.innerHTML = `<div class="auth-screen">
+            <h1>FASHION</h1><p>Sign in to your account</p>
+            <div id="auth-error" class="error-msg"></div>
+            <form onsubmit="handleLogin(event)">
+              <input id="login-email" type="email" placeholder="Email" required />
+              <input id="login-password" type="password" placeholder="Password" required />
+              <button class="btn-primary" type="submit">Sign In</button>
+            </form>
+            <div class="auth-link" onclick="state.screen='register'; render()">Don't have an account? <b>Sign Up</b></div>
+          </div>`;
+        }
+        return;
+      }
+
+      let content = '';
+      let showNav = true;
+
+      switch (state.screen) {
+        case 'home':
+          content = `<div class="page-content">
+            <div class="header">
+              <div><div class="header-greeting">Discover</div><div class="header-title">Fashion Collection</div></div>
+              <div class="header-icon" onclick="loadCart(); setTab('cart')">🛍️</div>
+            </div>
+            <div class="section-title">Categories</div>
+            <div class="chip-row">${state.categories.map(c =>
+              `<div class="chip" onclick="state.selectedCategory=${c.id}; state.searchQuery=''; loadProducts(); navigate('catalog')">${c.name}</div>`
+            ).join('')}</div>
+            <div class="section-title">Featured</div>
+            <div class="product-grid">${state.featured.map(productCardHTML).join('')}</div>
+            <div class="view-all-btn" onclick="state.selectedCategory=null; state.searchQuery=''; loadProducts(); navigate('catalog')">View All Products →</div>
+          </div>`;
+          break;
+
+        case 'catalog':
+          content = `<div class="page-content">
+            <div class="search-box">
+              🔍 <input placeholder="Search products..." value="${state.searchQuery}" onchange="state.searchQuery=this.value" onkeydown="if(event.key==='Enter'){loadProducts()}" />
+            </div>
+            <div class="chip-row">
+              <div class="chip ${!state.selectedCategory ? 'active' : ''}" onclick="state.selectedCategory=null; loadProducts()">All</div>
+              ${state.categories.map(c => `<div class="chip ${state.selectedCategory===c.id ? 'active' : ''}" onclick="state.selectedCategory=${c.id}; loadProducts()">${c.name}</div>`).join('')}
+            </div>
+            <div class="chip-row" style="margin-top:8px">
+              ${[['newest','Newest'],['price_asc','Price: Low'],['price_desc','Price: High'],['rating','Top Rated']].map(([k,l]) =>
+                `<div class="chip ${state.sort===k ? 'active' : ''}" onclick="state.sort='${k}'; loadProducts()">${l}</div>`
+              ).join('')}
+            </div>
+            <div style="margin-top:12px"></div>
+            <div class="product-grid">${state.products.map(productCardHTML).join('')}</div>
+            ${state.products.length === 0 ? '<div class="loading">No products found</div>' : ''}
+          </div>`;
+          break;
+
+        case 'product-detail':
+          showNav = false;
+          const p = state.selectedProduct;
+          if (!p) { content = '<div class="loading">Loading...</div>'; break; }
+          const sizes = JSON.parse(p.sizes);
+          content = `<div class="product-detail" style="padding-bottom:100px">
+            <div class="back-header" style="position:sticky;top:0;z-index:10">
+              <button class="back-btn" onclick="goBack()">←</button>
+              <h2>${p.name}</h2>
+            </div>
+            <img src="${p.image_url}" alt="${p.name}" onerror="this.style.background='#e0e0e0'" />
+            <div class="details">
+              <div class="cat">${p.category_name}</div>
+              <div class="pname">${p.name}</div>
+              <div class="price-row">
+                <span class="price">₹${p.price.toLocaleString('en-IN')}</span>
+                <span class="rating-badge">⭐ ${p.rating}</span>
+              </div>
+              <div class="desc">${p.description}</div>
+              <div class="label">Color: <span style="font-weight:400;color:#666">${p.color}</span></div>
+              <div class="label">Select Size</div>
+              <div class="size-row">${sizes.map(s =>
+                `<button class="size-btn ${state.selectedSize===s ? 'active' : ''}" onclick="state.selectedSize='${s}'; render()">${s}</button>`
+              ).join('')}</div>
+            </div>
+            <div class="section-title">You Might Also Like</div>
+            <div class="rec-row" id="rec-row"></div>
+          </div>
+          <div class="bottom-bar">
+            <button class="btn-wishlist" onclick="toggleWishlist(${p.id})">${isWishlisted(p.id) ? '❤️' : '🤍'}</button>
+            <button class="btn-add-cart" onclick="addToCart(${p.id}, state.selectedSize)">🛍️ Add to Cart</button>
+          </div>`;
+          setTimeout(async () => {
+            try {
+              const recs = await api(`/products/recommendations?category_id=${p.category_id}&exclude_id=${p.id}`);
+              const el = document.getElementById('rec-row');
+              if (el) el.innerHTML = recs.map(r => `<div class="rec-card" onclick="loadProduct(${r.id}); navigate('product-detail')">
+                <img src="${r.image_url}" onerror="this.style.background='#e0e0e0'" />
+                <div class="rname">${r.name}</div>
+                <div class="rprice">₹${r.price.toLocaleString('en-IN')}</div>
+              </div>`).join('');
+            } catch {}
+          }, 100);
+          break;
+
+        case 'cart':
+          content = `<div class="page-content" style="padding:16px">
+            <div class="section-title" style="padding:0;margin-top:40px">My Cart</div>
+            ${state.cart.length === 0 ? `<div class="empty-state"><div class="icon">🛍️</div><h3>Your cart is empty</h3><p>Add items to get started</p></div>` :
+              state.cart.map(item => `<div class="cart-item">
+                <img src="${item.image_url}" onerror="this.style.background='#e0e0e0'" />
+                <div class="details">
+                  <div class="cname">${item.name}</div>
+                  <div class="csize">Size: ${item.size}</div>
+                  <div class="cprice">₹${item.price.toLocaleString('en-IN')}</div>
+                  <div class="qty-row">
+                    <button class="qty-btn" onclick="updateCartQty(${item.id}, ${item.quantity-1})">−</button>
+                    <span>${item.quantity}</span>
+                    <button class="qty-btn" onclick="updateCartQty(${item.id}, ${item.quantity+1})">+</button>
+                  </div>
+                </div>
+                <button class="remove-btn" onclick="removeCartItem(${item.id})">🗑️</button>
+              </div>`).join('') +
+              `<div class="cart-summary">
+                <div class="summary-row"><span class="label">Subtotal</span><span class="value">₹${state.cartTotal.toLocaleString('en-IN')}</span></div>
+                <div class="summary-row"><span class="label">Delivery</span><span class="value" style="color:#27ae60">FREE</span></div>
+                <div class="summary-row total-row"><span class="label">Total</span><span class="value">₹${state.cartTotal.toLocaleString('en-IN')}</span></div>
+                <button class="btn-primary" style="margin-top:16px" onclick="navigate('checkout')">Proceed to Checkout →</button>
+              </div>`
+            }
+          </div>`;
+          break;
+
+        case 'checkout':
+          showNav = false;
+          content = `<div class="back-header"><button class="back-btn" onclick="goBack()">←</button><h2>Checkout</h2></div>
+            <div class="checkout-form">
+              <div class="section-title" style="padding:0">Shipping Address</div>
+              <form onsubmit="handlePlaceOrder(event)">
+                <input id="co-address" placeholder="Street Address" required />
+                <input id="co-city" placeholder="City" required />
+                <div class="row"><input id="co-pin" placeholder="Pincode" required /><input id="co-phone" placeholder="Phone" required /></div>
+                <div class="section-title" style="padding:0;margin-top:16px">Order Summary</div>
+                ${state.cart.map(i => `<div class="order-summary-item"><span>${i.name} (${i.size}) x${i.quantity}</span><span>₹${(i.price*i.quantity).toLocaleString('en-IN')}</span></div>`).join('')}
+                <div class="divider"></div>
+                <div class="order-summary-item"><b>Total</b><b style="font-size:18px">₹${state.cartTotal.toLocaleString('en-IN')}</b></div>
+                <button class="btn-primary" type="submit" style="margin-top:16px">Place Order</button>
+              </form>
+            </div>`;
+          break;
+
+        case 'order-success':
+          showNav = false;
+          content = `<div class="success-screen">
+            <div class="icon">✅</div>
+            <h2>Order Confirmed!</h2>
+            <p>Order #${state.lastOrderId} has been placed successfully.</p>
+            <p class="sub">You will receive a confirmation shortly.</p>
+            <button class="btn-primary" style="width:auto;padding:0 28px;margin-top:32px" onclick="setTab('home')">Continue Shopping</button>
+          </div>`;
+          break;
+
+        case 'wishlist':
+          content = `<div class="page-content" style="padding:16px">
+            <div class="section-title" style="padding:0;margin-top:40px">My Wishlist</div>
+            ${state.wishlist.length === 0 ? '<div class="empty-state"><div class="icon">🤍</div><h3>Your wishlist is empty</h3><p>Save items you love for later</p></div>' :
+              state.wishlist.map(item => `<div class="cart-item">
+                <img src="${item.image_url}" onclick="loadProduct(${item.product_id}); navigate('product-detail')" style="cursor:pointer" onerror="this.style.background='#e0e0e0'" />
+                <div class="details" onclick="loadProduct(${item.product_id}); navigate('product-detail')" style="cursor:pointer">
+                  <div style="font-size:10px;color:#999;text-transform:uppercase">${item.category_name}</div>
+                  <div class="cname">${item.name}</div>
+                  <div class="cprice">₹${item.price.toLocaleString('en-IN')}</div>
+                  <div style="font-size:11px;color:#666">⭐ ${item.rating}</div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:8px;align-self:center">
+                  <button style="background:#1a1a1a;color:#fff;border:none;border-radius:8px;padding:8px 12px;font-size:12px;cursor:pointer" onclick="moveToCart(${JSON.stringify(item).replace(/"/g,'&quot;')})">🛍️ Cart</button>
+                  <button class="remove-btn" onclick="toggleWishlist(${item.product_id})">✕</button>
+                </div>
+              </div>`).join('')}
+          </div>`;
+          break;
+
+        case 'profile':
+          content = `<div class="page-content">
+            <div class="profile-header">
+              <div class="avatar">${state.user?.name?.charAt(0)?.toUpperCase() || 'U'}</div>
+              <div class="pname">${state.user?.name || ''}</div>
+              <div class="pemail">${state.user?.email || ''}</div>
+            </div>
+            <div class="actions-row">
+              <button class="action-card" onclick="loadWishlist(); setTab('wishlist')"><div class="aicon">❤️</div>Wishlist</button>
+              <button class="action-card" onclick="loadCart(); setTab('cart')"><div class="aicon">🛍️</div>Cart</button>
+              <button class="action-card" onclick="logout()"><div class="aicon">🚪</div>Logout</button>
+            </div>
+            <div class="section-title">Order History</div>
+            ${state.orders.length === 0 ? '<div class="empty-state" style="min-height:30vh"><div class="icon">📋</div><h3>No orders yet</h3></div>' :
+              state.orders.map(o => {
+                const date = new Date(o.created_at).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' });
+                return `<div class="order-card">
+                  <div class="order-header">
+                    <div><div class="order-id">Order #${o.id}</div><div class="order-date">${date}</div></div>
+                    <span class="status-badge" style="background:#27ae6020;color:#27ae60">${o.status.charAt(0).toUpperCase()+o.status.slice(1)}</span>
+                  </div>
+                  ${(o.items||[]).slice(0,3).map(i => `<div class="order-item-row">
+                    <img src="${i.image_url}" onerror="this.style.background='#e0e0e0'" />
+                    <div class="order-item-info"><div class="oname">${i.name}</div><div class="oqty">Qty: ${i.quantity}</div></div>
+                    <div class="order-item-price">₹${i.price.toLocaleString('en-IN')}</div>
+                  </div>`).join('')}
+                  <div class="order-footer"><span style="color:#666">Total</span><span style="font-size:16px;font-weight:700">₹${o.total.toLocaleString('en-IN')}</span></div>
+                </div>`;
+              }).join('')}
+          </div>`;
+          break;
+      }
+
+      // Navigation bar
+      const nav = showNav ? `<div class="bottom-nav">
+        <button class="nav-item ${state.tab==='home'?'active':''}" onclick="setTab('home'); loadInitialData()">
+          <span style="font-size:20px">${state.tab==='home'?'🏠':'🏡'}</span>Home
+        </button>
+        <button class="nav-item ${state.tab==='catalog'?'active':''}" onclick="state.selectedCategory=null; loadProducts(); setTab('catalog')">
+          <span style="font-size:20px">${state.tab==='catalog'?'📱':'📱'}</span>Catalog
+        </button>
+        <button class="nav-item ${state.tab==='wishlist'?'active':''}" onclick="loadWishlist(); setTab('wishlist')">
+          <span style="font-size:20px">${state.tab==='wishlist'?'❤️':'🤍'}</span>Wishlist
+        </button>
+        <button class="nav-item ${state.tab==='cart'?'active':''}" onclick="loadCart(); setTab('cart')">
+          <span style="font-size:20px">🛍️</span>Cart
+        </button>
+        <button class="nav-item ${state.tab==='profile'?'active':''}" onclick="loadOrders(); setTab('profile')">
+          <span style="font-size:20px">${state.tab==='profile'?'👤':'👤'}</span>Profile
+        </button>
+      </div>` : '';
+
+      app.innerHTML = content + nav;
+    }
+
+    // Init
+    async function init() {
+      if (state.token) {
+        try {
+          await api('/auth/me');
+          await loadInitialData();
+        } catch {
+          // Token invalid - clear and show login
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          state.token = null;
+          state.user = null;
+        }
+      }
+      render();
+    }
+    init();
+  </script>
+</body>
+</html>
