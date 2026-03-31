@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "ts-node-dev --respawn src/index.ts",
-    "build": "tsc",
+    "build": "npm install typescript @types/bcryptjs @types/better-sqlite3 @types/cors @types/express @types/jsonwebtoken --save-dev && tsc",
     "start": "node dist/index.js"
   },
   "dependencies": {
@@ -21,5 +21,8 @@
     "@types/jsonwebtoken": "^9.0.5",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }
